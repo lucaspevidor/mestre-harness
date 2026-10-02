@@ -1,0 +1,149 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Git walkthrough extractor inputs v1",
+  "description": "Facts the extractor cannot read from Git: why the base was chosen, the review record, and check results. Written by the orchestrator from the review report and execution log.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "repository_label": {
+      "type": "string",
+      "minLength": 1
+    },
+    "base_selection_reason": {
+      "type": "string",
+      "minLength": 1
+    },
+    "review": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reviewed_base_sha": {
+          "type": "string",
+          "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$"
+        },
+        "reviewed_sha": {
+          "type": "string",
+          "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$"
+        },
+        "verdict": {
+          "enum": [
+            "no-blocking-findings-in-inspected-scope",
+            "changes-requested",
+            "incomplete-evidence"
+          ]
+        },
+        "report_summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "unresolved_findings": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "coverage_limits": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "required": [
+        "reviewed_base_sha",
+        "reviewed_sha",
+        "verdict",
+        "report_summary",
+        "unresolved_findings",
+        "coverage_limits"
+      ]
+    },
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "method": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "enum": [
+              "passed",
+              "failed",
+              "blocked",
+              "not-run"
+            ]
+          },
+          "tested_revision": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "exit_code": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "captured_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "output": {
+            "type": "string"
+          },
+          "coverage_limits": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "required": [
+          "method",
+          "status",
+          "tested_revision",
+          "exit_code",
+          "captured_at",
+          "output",
+          "coverage_limits"
+        ]
+      }
+    },
+    "coverage_limits": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  },
+  "required": [
+    "base_selection_reason",
+    "review",
+    "checks",
+    "coverage_limits"
+  ]
+}

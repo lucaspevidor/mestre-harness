@@ -147,7 +147,7 @@ render_skills() {
   for skill in "$PACK_DIR/skills/${PREFIX}"*/; do
     cp -R "${skill%/}" "$dest/"
   done
-  find "$dest/${PREFIX}"* -name .DS_Store -delete
+  find "$dest/${PREFIX}"* \( -name .DS_Store -o -name __pycache__ \) -prune -exec rm -rf {} +
   escaped="$(printf '%s' "$PACK_DIR/setup.sh" | sed 's/[\\&|]/\\&/g')"
   sed "s|$SETUP_PLACEHOLDER|$escaped|g" "$PACK_DIR/skills/$WT_SKILL/SKILL.md" \
     > "$dest/$WT_SKILL/SKILL.md"
