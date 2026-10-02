@@ -621,11 +621,12 @@ class ExtractionIsolationTests(unittest.TestCase):
     def test_uncommitted_work_is_excluded_and_disclosed(self):
         repo = Repo(self.tmp / "repo")
         base, final = self.two_commits(repo)
-        repo.write("app.py", "value = 999\n")
+        # The marker cannot occur in a hexadecimal commit or blob ID.
+        repo.write("app.py", "value = 'uncommitted-marker'\n")
         repo.write("scratch.txt", "untracked\n")
         evidence = wt.build_evidence(repo.root, base, final, inputs_for(base, final))
         self.assertEqual(evidence["worktree"], {"state": "excluded-changes", "excluded_changes": [".M app.py", "?? scratch.txt"]})
-        self.assertNotIn("999", wt.serialize(evidence).decode())
+        self.assertNotIn("uncommitted-marker", wt.serialize(evidence).decode())
 
     def test_merge_commits_inside_the_range(self):
         repo = Repo(self.tmp / "repo")
