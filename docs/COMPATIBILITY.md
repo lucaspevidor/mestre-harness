@@ -1,0 +1,15 @@
+# Compatibility and official sources
+
+Checked against official Claude Code documentation on 2 October 2026. This is a static configuration review, not a claim that the harness ran in a particular installed version.
+
+The agents use only `name`, `description`, `tools`, `model`, and `permissionMode` frontmatter. Claude Code documents these fields, Markdown agent definitions, project scope at `.claude/agents/`, and `model: inherit`. Non-fork agents start with separate context, so explicit handoffs are essential. See [custom subagents](https://code.claude.com/docs/en/sub-agents).
+
+All definitions declare a tool list rather than inheriting every available tool. Only the mapper, reviewer, and implementer list `Bash`; the hardener lists `Edit` without `Write`, the walkthrough author lists `Write` without `Edit`, and the bloat analyzer is read-only. Specifiers such as `Bash(git diff *)` do not narrow a tool in `tools`, and in `disallowedTools` they remove the whole tool, so the lists use bare tool names. Setting `permissionMode: default` does not override all parent permission modes: under `acceptEdits`, auto mode, or `bypassPermissions` the subagent runs in the parent's mode. See [capabilities and permission modes](https://code.claude.com/docs/en/sub-agents#control-subagent-capabilities).
+
+The orchestrator is a project skill at `.claude/skills/mestre-harness/SKILL.md`, not a `CLAUDE.md` section. `CLAUDE.md` content loads into every session and every subagent; a skill body loads only into the session that invokes it. Both skills set `disable-model-invocation: true`, so their descriptions are not in context and only the slash command starts them. The orchestrator uses `$ARGUMENTS` and `${CLAUDE_SKILL_DIR}`, and keeps detail in supporting files read on demand. After compaction Claude Code re-attaches the first 5,000 tokens of an invoked skill; `SKILL.md` is well under that. See [skills](https://code.claude.com/docs/en/skills) and [project instructions](https://code.claude.com/docs/en/memory).
+
+The agent names carry a `mestre-` prefix because two project agents with the same name resolve by filesystem read order. Project agents and skills are found from the working directory, so each worktree needs its own install.
+
+Prompt instructions do not enforce a shell boundary. Validate actual settings and any required sandbox separately. Built-in read-only shell commands, including read-only Git, run without a prompt in every mode. Writes under `.claude/` are protected and cannot be pre-approved by allow rules, which is why runtime artifacts live outside it. See [permission modes](https://code.claude.com/docs/en/permission-modes#protected-paths), [permissions](https://code.claude.com/docs/en/permissions) and [sandboxing](https://code.claude.com/docs/en/sandboxing).
+
+Tool availability and loading behavior can vary with Claude Code version and organization settings. Start a new session after running setup, verify the eight names, and perform a planning-only smoke test. No version-specific CLI wizard, model ID, `maxTurns`, memory store, experimental field, or nesting feature is required by the harness.

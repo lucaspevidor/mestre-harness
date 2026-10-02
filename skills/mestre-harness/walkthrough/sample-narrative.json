@@ -1,0 +1,54 @@
+{
+  "schema_version": "1.0",
+  "synthetic": true,
+  "evidence_sha256": "9ae3011330a837aee2dad2e8f1139f4e2624507bd5fbdd63ab861c458df24a7d",
+  "base_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "final_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "title": "Synthetic example: trim spaces around a greeting name",
+  "summary": "This fictional change illustrates how a short explanation can point to real-code-shaped evidence without embedding source in the narrative. It is a schema example, not a generated walkthrough.",
+  "sections": [
+    {
+      "id": "S01",
+      "title": "Remove accidental surrounding whitespace",
+      "before": "The example previously appended the supplied string as-is.",
+      "after": "The example now strips whitespace from either end of that string before appending it to the greeting.",
+      "why": "This illustrates a small behavior change whose explanation can refer to before, after, and diff evidence.",
+      "evidence_ids": [
+        "E01",
+        "E02",
+        "E03"
+      ],
+      "deeper_explanation": "Internal spaces remain unchanged. Non-string input and the intended empty-name behavior need an explicit contract and appropriate tests in a real task.",
+      "deeper_evidence_ids": [
+        "E02"
+      ]
+    }
+  ],
+  "file_coverage": [
+    {
+      "file_id": "F01",
+      "category": "explained",
+      "section_ids": [
+        "S01"
+      ],
+      "reason": "The only fictional changed file contains the behavior described in the first section."
+    }
+  ],
+  "test_notes": [
+    {
+      "evidence_id": "E04",
+      "explanation": "The example records the test command as not run. There is no claim that tests passed or that a real repository was checked."
+    }
+  ],
+  "tradeoffs": [
+    "Leading and trailing whitespace would no longer be preserved; a real user would need to want that behavior."
+  ],
+  "limitations": [
+    "All evidence and identifiers are hand-authored and fictional.",
+    "No extractor, renderer, HTML file, or end-to-end validation was run.",
+    "The narrative schema does not by itself establish factual correctness."
+  ],
+  "unresolved_findings": [
+    "No real tests or caller compatibility were assessed."
+  ]
+}

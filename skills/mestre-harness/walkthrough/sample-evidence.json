@@ -1,0 +1,114 @@
+{
+  "schema_version": "1.0",
+  "synthetic": true,
+  "repository_label": "Synthetic greeting example",
+  "object_format": "sha1",
+  "base_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "final_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "base_selection_reason": "Fictional IDs for illustrating the interface. No repository was inspected.",
+  "review": {
+    "reviewed_base_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "reviewed_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "verdict": "no-blocking-findings-in-inspected-scope",
+    "report_summary": "Synthetic review record for schema demonstration only; no real code review occurred.",
+    "unresolved_findings": [
+      "No real tests or caller compatibility were assessed."
+    ],
+    "coverage_limits": [
+      "All source, commit IDs, blob IDs, and review details are hand-authored examples."
+    ]
+  },
+  "worktree": {
+    "state": "clean",
+    "excluded_changes": []
+  },
+  "files": [
+    {
+      "id": "F01",
+      "status": "modified",
+      "old_path": "greeting.py",
+      "new_path": "greeting.py",
+      "old_blob_id": "cccccccccccccccccccccccccccccccccccccccc",
+      "new_blob_id": "dddddddddddddddddddddddddddddddddddddddd",
+      "old_mode": "100644",
+      "new_mode": "100644",
+      "evidence_ids": [
+        "E01",
+        "E02",
+        "E03",
+        "E04"
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "E01",
+      "kind": "source",
+      "file_id": "F01",
+      "side": "base",
+      "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "blob_id": "cccccccccccccccccccccccccccccccccccccccc",
+      "lines": {
+        "start": 1,
+        "end": 2
+      },
+      "text": "def greet(name):\n    return \"Hello, \" + name\n",
+      "text_sha256": "7f0a193194343d321a97c5ae96b31ac740e197d3756dff1c97af61c53319c149"
+    },
+    {
+      "id": "E02",
+      "kind": "source",
+      "file_id": "F01",
+      "side": "final",
+      "revision": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "blob_id": "dddddddddddddddddddddddddddddddddddddddd",
+      "lines": {
+        "start": 1,
+        "end": 2
+      },
+      "text": "def greet(name):\n    return \"Hello, \" + name.strip()\n",
+      "text_sha256": "fee0032c4c4ee56ae693636d79563cc3e33cdc0e3545ccfa2aa123f4db84771a"
+    },
+    {
+      "id": "E03",
+      "kind": "diff",
+      "file_id": "F01",
+      "base_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "final_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "hunk_id": "H01",
+      "old_range": {
+        "start": 1,
+        "count": 2
+      },
+      "new_range": {
+        "start": 1,
+        "count": 2
+      },
+      "text": "@@ -1,2 +1,2 @@\n def greet(name):\n-    return \"Hello, \" + name\n+    return \"Hello, \" + name.strip()\n",
+      "text_sha256": "bbf9cc8538f98d50f9116844a8bce589e05077118049d56e105442f3f66ccbca"
+    },
+    {
+      "id": "E04",
+      "kind": "check",
+      "file_ids": [
+        "F01"
+      ],
+      "method": "python -m pytest",
+      "status": "not-run",
+      "tested_revision": null,
+      "applies_to_final": false,
+      "applicability_evidence": "No execution or tested-tree evidence exists in this fictional example.",
+      "exit_code": null,
+      "captured_at": null,
+      "text": "Synthetic example only. No command was executed.\n",
+      "text_sha256": "769025ee3311aa92d6a6cd5d654805e8c412e3b77f71066e4f6b1b2731e04025",
+      "coverage_limits": [
+        "No real test results are available."
+      ]
+    }
+  ],
+  "redaction_notes": [],
+  "coverage_limits": [
+    "Synthetic schema example. Must not be treated as an extracted, reviewed, or verified repository change."
+  ]
+}
