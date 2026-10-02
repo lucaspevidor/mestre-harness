@@ -220,7 +220,7 @@ class RenderTests(unittest.TestCase):
         self.assertIn("All source, commit IDs, blob IDs, and review details are hand-authored examples.", page)
 
     def test_untrusted_text_is_displayed_inertly(self):
-        payload = '</pre><script>alert(1)</script><img src=x onerror=alert(2)>&"\' \x1b[31mred‮'
+        payload = '</pre><script>alert(1)</script><img src=x onerror=alert(2)>&"\' \x1b[31mred\u202e'
 
         def poison_evidence(evidence):
             evidence["files"][0].update(old_path='"><svg onload=1>.py', new_path='"><svg onload=1>.py')
@@ -241,7 +241,7 @@ class RenderTests(unittest.TestCase):
             narrative["tradeoffs"] = [payload]
 
         page = self.render(poison_evidence, poison_narrative)
-        for forbidden in ("<script", "<img", "<svg", "\x1b", "‮", "</pre>"):
+        for forbidden in ("<script", "<img", "<svg", "\x1b", "\u202e", "</pre>"):
             self.assertNotIn(forbidden, page)
         self.assertIn("&lt;script&gt;alert(1)&lt;/script&gt;", page)
         self.assertIn("\\x1b[31mred\\u202e", page)

@@ -19,7 +19,7 @@
 - [ ] Tool lists match the roles: only mapper, reviewer, and implementer have `Bash`; the hardener can only edit; the bloat analyzer is read-only; only the implementer changes product files or Git state
 - [ ] Actual permissions are reviewed; nobody mistakes instructions for a shell sandbox
 - [ ] Repository rules outrank inferred habits; contradictory instructions are resolved
-- [ ] No renderer, extractor, push, or PR is implied to have run
+- [ ] No push or PR is implied to have run, and a walkthrough is reported only when `render` succeeded
 
 ## Planning-only smoke test after adoption
 
@@ -34,6 +34,6 @@
 
 Use a disposable/trusted test repository and an approved tiny change. Check that the implementer follows documented conventions, does not absorb pre-existing changes, runs relevant checks, and makes a coherent local commit. Give the reviewer the base and final SHA; confirm it inspects the real diff itself and leaves the worktree and Git state unchanged. Introduce a repair and ensure review/test evidence is refreshed for the new SHA. Stop at the configured bound rather than hiding unresolved findings.
 
-## Future walkthrough acceptance
+## Walkthrough acceptance
 
-Use the separate [renderer acceptance checklist](../skills/mestre-harness/walkthrough/ACCEPTANCE.md). This draft's schema checks do not establish Git extraction correctness, secret-redaction completeness, browser safety, or offline rendering.
+Use the separate [acceptance checklist](../skills/mestre-harness/walkthrough/ACCEPTANCE.md), which marks each case as automated, partial, or manual. Before sharing a walkthrough, open it with the network disabled and read it for leftover secrets: redaction is pattern-based and cannot be complete.

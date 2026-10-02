@@ -2,16 +2,16 @@
 
 ## Status and purpose
 
-**Design only. No extractor, renderer, browser UI, or command-line program is implemented in this pack.** The schemas and synthetic example describe a future interface, not an existing product. Building that tooling requires a separate approved task.
+**Implemented as [walkthrough.py](walkthrough.py), version 1.** This document is the specification it follows; [Version 1 limits](#version-1-limits) lists what it does not do yet. The script is one Python 3 file with no dependencies and three commands: `extract`, `validate`, and `render`.
 
 The goal is one private, self-contained HTML file that explains the exact final reviewed change. A reader gets a short plain-language account first and can expand real code/diff evidence when useful. It works from a local file with the network disabled.
 
 ## Division of responsibility
 
 1. **Main session:** records scope, selects/captures the base, arranges implementation and independent review, freezes the final revision, and verifies the result
-2. **Deterministic extractor script, to be built:** reads real Git objects/diffs, captures verification evidence, applies redactions, and produces the evidence bundle
+2. **Deterministic extractor (`walkthrough.py extract`):** reads real Git objects/diffs, captures verification evidence, applies redactions, and produces the evidence bundle
 3. **Walkthrough author:** reads sanitized evidence and writes structured prose, references, and reading order only
-4. **Deterministic renderer, to be built:** validates provenance and references, injects escaped evidence, and writes offline HTML
+4. **Deterministic renderer (`walkthrough.py render`):** validates provenance and references, injects escaped evidence, and writes offline HTML
 
 The LLM does not manufacture code, reconstruct a patch, choose an unverified revision, or supply executable HTML. A schema-valid narrative alone is not proof that its explanations are correct.
 
@@ -51,7 +51,7 @@ Freeze `final_sha` after independent review and any bounded repairs. Require the
 
 Any later edit/commit invalidates the relevant review and walkthrough provenance. Re-extract and re-review affected content; never relabel old evidence with the new SHA. The offline file remains an honest historical snapshot and cannot know automatically that the repository later changed.
 
-## Future extractor responsibilities
+## Extractor responsibilities
 
 1. Validate repository identity, full commit IDs, intended range, reviewed base/final SHA and status, and dirty-state exclusions
 2. Obtain a complete changed-file inventory and raw Git evidence for the captured base/final pair. Use Git plumbing or commands with equivalent semantics to `git diff --no-ext-diff --no-textconv --no-color` and `git show` of verified objects; do not read mutable working-tree files as committed source
@@ -64,7 +64,7 @@ Any later edit/commit invalidates the relevant review and walkthrough provenance
 9. Enforce explicit per-file/total limits. Record every omission and its reason. If essential evidence exceeds the limits, stop for a scoped expansion or an explicitly incomplete result; never silently truncate a critical hunk or claim full coverage
 10. Produce `evidence.json` using [the evidence schema](evidence.schema.json), validate structural and semantic consistency, and compute the SHA-256 digest of its exact UTF-8 file bytes
 
-The above names and command shapes specify behavior, not a provided script. A future implementation must verify details against official Git documentation and test all edge cases before use. Local extraction can operate without network access; no service receives the repository by default.
+`walkthrough.py extract` implements these responsibilities within the limits listed below. Local extraction can operate without network access; no service receives the repository by default.
 
 ## Evidence interface
 
@@ -87,7 +87,7 @@ The author receives only sanitized evidence and relevant approved rationale. It 
 
 Use [sample-evidence.json](sample-evidence.json) and [sample-narrative.json](sample-narrative.json) as a **synthetic, hand-authored interface example**. Their commit/blob IDs, source, diff, and review record are fictional. No repository was extracted or reviewed, and the sample test is explicitly not run. A production renderer must reject synthetic bundles unless explicitly in a clearly labeled demo/test context.
 
-## Future renderer validation and safety
+## Renderer validation and safety
 
 Before rendering:
 
@@ -106,6 +106,17 @@ Generate safe internal fragment IDs from validated opaque identifiers, not paths
 
 Output should be one HTML file with no runtime network or filesystem reads. Copying it to another directory must not break it. Prevent accidental disclosure through absolute paths, hidden payloads, source maps, or included unused artifacts. Keep it local; opening a PR, uploading, or publishing the report needs separate approval.
 
+## Version 1 limits
+
+- **Checks are supplied, not run.** The extractor takes check results from the inputs file and labels them as supplied. A check applies to the final code only when its recorded revision equals `final_sha`; there is no identical-tree proof
+- **Redaction is pattern-based.** Files whose names match a sensitive-path list are omitted, and common token formats, private key blocks, quoted secrets, and credentials in URLs are masked. It can miss secrets and can mask harmless text. There is no built-in human review step
+- **No diagnostic mode.** A review that requests changes or has incomplete evidence makes `render` refuse; there is no clearly labeled partial report
+- **Ancestry is required.** A base that is not an ancestor of the final commit is refused. Merge commits inside the range are fine
+- **Diff hunks by default.** Source ranges are added only on request with `--source`. Whole-file additions and deletions are read with a literal pathspec; every other file is diffed blob to blob, so path attributes cannot affect it
+- **Metadata instead of content** for binary files, symbolic links, submodules, files that are not valid UTF-8, and anything over the size limits. Generated files are not detected; the author classifies them
+- **Commit to commit only.** There is no worktree-snapshot mode. Uncommitted changes are listed and excluded
+- **Browser checks are manual.** The automated tests cover structure and escaping. Opening the file with the network disabled, keyboard use, and narrow windows have not been signed off
+
 ## Completion evidence
 
-A future implementation is complete only when [the acceptance cases](ACCEPTANCE.md) pass, the exact report is opened locally with network disabled, and code/line/reference fidelity is checked against captured Git objects. Record file hash, base/final IDs, review status, verification limits, and any omissions in the execution log. Never describe a schema-only check as a functioning HTML pipeline.
+A walkthrough is complete only when [the acceptance cases](ACCEPTANCE.md) hold for it, the exact report is opened locally with network disabled, and code/line/reference fidelity is checked against captured Git objects. Record file hash, base/final IDs, review status, verification limits, and any omissions in the execution log. Never describe a schema-only check as a functioning HTML pipeline.

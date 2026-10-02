@@ -28,6 +28,8 @@ The harness supplies instructions and per-role tool lists. Setup copies agent an
 - **Parent mode wins in three cases:** when the main session is in `acceptEdits`, auto mode, or `bypassPermissions`, subagents run in that mode and their `permissionMode` is ignored. The declared mode applies only when the main session is in `default`, `dontAsk`, or `plan`
 - **Protected paths:** writes under `.claude/`, `.git`, and similar directories prompt in `default` and `acceptEdits` and are denied in `dontAsk`. Allow rules cannot pre-approve them. That is why runtime artifacts go to `.agent-work/`, while the installed agents and skill under `.claude/` are only read
 
+The orchestrator runs the walkthrough generator with `python3`, which is not in Claude Code's built-in read-only set, so it prompts in `default` mode. The script only runs read-only Git commands through argument arrays, overrides configuration that would launch external diff or monitor programs, and writes the one file named by `--out`.
+
 Running a test can write files, execute project-controlled code, or contact services. Whoever runs it, the implementer, the reviewer, or the main session, inspects the command and environment first and asks when it exceeds authorization.
 
 ## Optional tightening, not shipped

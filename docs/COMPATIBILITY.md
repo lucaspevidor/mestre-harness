@@ -12,4 +12,6 @@ The agent names carry a `mestre-` prefix because two project agents with the sam
 
 Prompt instructions do not enforce a shell boundary. Validate actual settings and any required sandbox separately. Built-in read-only shell commands, including read-only Git, run without a prompt in every mode. Writes under `.claude/` are protected and cannot be pre-approved by allow rules, which is why runtime artifacts live outside it. See [permission modes](https://code.claude.com/docs/en/permission-modes#protected-paths), [permissions](https://code.claude.com/docs/en/permissions) and [sandboxing](https://code.claude.com/docs/en/sandboxing).
 
+The walkthrough generator uses only the Python standard library and is written to avoid syntax newer than Python 3.8, but it has been run only on Python 3.14. It needs Git 2.25 or later for `rev-parse --show-object-format`, and was run on Git 2.55.
+
 Tool availability and loading behavior can vary with Claude Code version and organization settings. Start a new session after running setup, verify the eight names, and perform a planning-only smoke test. No version-specific CLI wizard, model ID, `maxTurns`, memory store, experimental field, or nesting feature is required by the harness.

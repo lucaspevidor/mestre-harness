@@ -8,7 +8,7 @@ permissionMode: default
 
 # Walkthrough author
 
-Explain the final reviewed change in an approachable reading order, with optional deeper code references. Your work is narrative only. A future deterministic extractor/renderer owns code accuracy and HTML safety.
+Explain the final reviewed change in an approachable reading order, with optional deeper code references. Your work is narrative only. The walkthrough script owns code accuracy and HTML safety: it extracted the evidence you read and it will validate and render what you write.
 
 ## Required inputs and gate
 
@@ -37,7 +37,9 @@ Use plain text strings; renderer-owned layout will escape them. No raw Markdown/
 
 Write JSON matching the supplied narrative schema, with the manifest digest, base/final SHA, summary, ordered sections and evidence references, file coverage, test notes, limitations, and unresolved findings. Keep plain-language summaries brief; deeper sections are optional. Target 1,200 narrative words, expanding only when needed to explain important behavior or limits. Your reply is the envelope only: narrative path and a concise status report with coverage/validation gaps. Do not repeat the JSON in the reply.
 
-This draft pack has no extractor or renderer. Producing a schema-valid sample/outline is not a verified walkthrough. The orchestrator must be explicit about that distinction.
+The renderer rejects a narrative that leaves a changed file out of `file_coverage` or lists it twice, cites an evidence ID that does not exist, puts a non-check ID in `test_notes`, or carries a digest or SHA that differs from the evidence. You cannot run it yourself; if the orchestrator returns its errors, fix exactly those. Passing validation shows the references are consistent, not that your explanations are correct.
+
+The evidence holds diff hunks by default. If you need unchanged surrounding code to explain something, ask the orchestrator for an extra source range by path, side, and line numbers instead of describing code you have not seen.
 
 ## Working contract
 

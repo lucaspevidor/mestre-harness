@@ -1,12 +1,12 @@
 # mestre-harness
 
-Version 0.2, review draft, 2 October 2026
+Version 0.3, review draft, 2 October 2026
 
 A repository-aware workflow for Claude Code. Running `/mestre-harness` turns the current session into an orchestrator that coordinates eight focused subagents. It owns the plan, asks for decisions, and keeps implementation inside the approved scope.
 
 The harness is installed per repository and stays local: nothing it adds is tracked, and no tracked file is changed. A repository where you have not run setup is unaffected.
 
-**The Git-to-HTML walkthrough is a design with schemas and a sample narrative; its extractor and renderer have not been built.**
+Requirements: Git, Bash for setup, and Python 3 for the walkthrough generator. Nothing is installed with a package manager.
 
 ## Install
 
@@ -115,6 +115,21 @@ All agent definitions use `model: inherit` and `permissionMode: default`. Agents
 
 The tool lists are enforced by Claude Code. Which paths an agent writes and which shell commands it runs are set by instructions and by your permission settings, not by a sandbox. See [permissions](docs/PERMISSIONS.md).
 
+## The walkthrough
+
+After the final review, the orchestrator turns the reviewed range into one offline HTML file that explains the change in plain language, with the real diff behind expandable sections. The code shown always comes from Git, never from a model.
+
+```bash
+python3 walkthrough.py extract --base <sha> --final <sha> --inputs inputs.json --out evidence.json
+python3 walkthrough.py render --evidence evidence.json --narrative narrative.json --out walkthrough.html
+```
+
+- `extract` reads the two commits from Git objects, ignores repository-configured diff programs, masks likely secrets, and records anything it could not show
+- `mestre-walkthrough-author` then writes `narrative.json`, which may only point at evidence IDs
+- `render` refuses unless hashes, commit IDs, references, and file coverage all agree and the review found no blocking problems. The page has no script and loads nothing from the network
+
+Check results are copied from the execution log, not run by the script, and secret masking is pattern-based, so look a walkthrough over before sharing it. The rules and current limits are in the [walkthrough design](skills/mestre-harness/walkthrough/DESIGN.md).
+
 ## What is in this folder
 
 | Path | Purpose | Installed |
@@ -122,9 +137,11 @@ The tool lists are enforced by Claude Code. Which paths an agent writes and whic
 | `setup.sh` | Install, status, uninstall | No |
 | `agents/` | The eight agent definitions | Yes, to `.claude/agents/` |
 | `skills/mestre-harness/SKILL.md` | Orchestrator instructions, loaded by `/mestre-harness` | Yes, to `.claude/skills/mestre-harness/` |
-| `skills/mestre-harness/contracts/`, `templates/`, `walkthrough/` | Handoff and finding contracts, artifact templates, walkthrough design | Yes, with the skill |
+| `skills/mestre-harness/contracts/`, `templates/` | Handoff and finding contracts, artifact templates | Yes, with the skill |
+| `skills/mestre-harness/walkthrough/` | `walkthrough.py`, its three schemas, the design, and a synthetic sample | Yes, with the skill |
 | `skills/mestre-wt/SKILL.md` | Tells a worktree-managing session to install the harness into each new worktree | Yes, to `.claude/skills/mestre-wt/` |
 | `docs/` | Permissions, compatibility, review checklist, validation record | No |
+| `tests/` | Tests for the walkthrough generator: `python3 -B -m unittest discover -s tests` | No |
 
 ## Working artifacts
 
@@ -134,4 +151,4 @@ Related files: [orchestrator](skills/mestre-harness/SKILL.md), [handoff contract
 
 ## What has been checked
 
-The setup script was exercised against throwaway repositories: install, update, status, quiet worktree install, worktree removal, uninstall, and refusal on tracked paths. The pack has structural and consistency checks, including eight valid frontmatter blocks, local links, and sample hashes. [Validation details](docs/VALIDATION.md) distinguish these from a live test. No `/mestre-harness` or `/mestre-wt` session, real task, Git extraction, or HTML generation has been run.
+The setup script was exercised against throwaway repositories: install, update, status, quiet worktree install, worktree removal, uninstall, and refusal on tracked paths. The pack has structural and consistency checks, including eight valid frontmatter blocks, local links, and sample hashes. The walkthrough generator has 48 automated tests against throwaway repositories and was used once by hand on this repository's own history. [Validation details](docs/VALIDATION.md) distinguish these from a live test. No `/mestre-harness` or `/mestre-wt` session or real task has been run.
