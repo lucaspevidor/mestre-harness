@@ -6,9 +6,10 @@
 - [ ] Routine in-scope hardening is incorporated automatically; material requirements/tradeoffs are surfaced
 - [ ] Bloat findings are evaluated and shown with exact location, reason, simpler alternative, and tradeoff; removal waits for approval
 - [ ] The final decomposition preserves unapproved items in its baseline
-- [ ] Small direct implementation requests may use the light path, with checks and independent review
+- [ ] Small direct implementation requests may use the light path
+- [ ] After approval, only the stages you ask for run: implement, review, fix, re-review, walkthrough. Not saying how far means implementation only
 - [ ] Local coherent milestone commits are part of approved implementation; push/PR/publication need separate approval
-- [ ] Two repair/re-review cycles are an acceptable escalation threshold; unresolved defects remain visible
+- [ ] Three fix and re-review cycles are an acceptable default limit; unresolved defects remain visible, and a walkthrough of a review that is not clean is labeled diagnostic
 - [ ] Artifacts and the map live in `.agent-work/`, untracked, and that retention suits the repository
 
 ## Configuration review
@@ -32,7 +33,7 @@
 
 ## Implementation trial only after approval
 
-Use a disposable/trusted test repository and an approved tiny change. Check that the implementer follows documented conventions, does not absorb pre-existing changes, runs relevant checks, and makes a coherent local commit. Give the reviewer the base and final SHA; confirm it inspects the real diff itself and leaves the worktree and Git state unchanged. Introduce a repair and ensure review/test evidence is refreshed for the new SHA. Stop at the configured bound rather than hiding unresolved findings.
+Use a disposable/trusted test repository and an approved tiny change. Check that the implementer follows documented conventions, does not absorb pre-existing changes, runs relevant checks, and makes a coherent local commit. Give the reviewer the base and final SHA; confirm it inspects the real diff itself and leaves the worktree and Git state unchanged. Ask for implementation only and confirm no review starts. Then ask for review and fixes: confirm every finding gets a disposition, dismissed findings are re-checked by the reviewer, and evidence is refreshed for the new SHA. Stop at the cycle limit rather than hiding unresolved findings.
 
 ## Walkthrough acceptance
 

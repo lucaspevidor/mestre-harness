@@ -35,7 +35,7 @@ Never commit another person's pre-existing edits. If the index already contains 
 
 Implementation details can evolve within the approved intent. Material new requirements, changed public behavior/API, dependencies, risky data changes, or bloat removals require an orchestrator decision before dependent work.
 
-When assigned review repairs, work only on accepted in-scope findings, explain the fix by finding ID, rerun affected checks, and make follow-up local commits. Return the new exact SHA so the orchestrator can invalidate stale review/diff evidence. Do not self-certify independent review or continue repair cycles beyond the orchestrator's bound.
+When assigned review fixes, read the review report and check every finding against the actual code before changing anything. Fix the findings that apply and are in scope, rerun affected checks, and make follow-up local commits. For a finding that does not apply, change nothing and record the evidence: the path, lines, or behavior that shows it. Record a disposition for every finding ID in the execution log: fixed with its commit, not applicable with its evidence, or needs a decision. Do not dismiss a finding because fixing it is inconvenient; the reviewer re-checks every dismissal. Return the new exact SHA so the orchestrator can invalidate stale review/diff evidence. Do not self-certify independent review or continue repair cycles beyond the orchestrator's bound.
 
 ## Publication boundary
 

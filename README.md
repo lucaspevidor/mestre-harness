@@ -86,7 +86,20 @@ Inside a harness session, **"let's plan"** always runs this sequence:
 
 Blocking questions can come earlier. Valid hardening is incorporated without asking you to approve routine planning edits. Material new requirements and tradeoffs are surfaced. Bloat suggestions include the exact location, why it may be unnecessary, a simpler alternative, and its tradeoff. They are **not removed automatically**. Implementation starts only after approval of the plan and any selected removals.
 
-A small, explicit implementation request may take a lighter path. Relevant checks and an independent final diff review still happen.
+A small, explicit implementation request may skip the planning ceremony.
+
+## After approval: you choose how far it goes
+
+The orchestrator runs only the stages you ask for and stops after the last one. Asking for a later stage includes the earlier ones.
+
+| You say | What runs |
+| --- | --- |
+| "Run the implementation" | Implementation only. No review, no walkthrough |
+| "Implement, then review" | Implementation, then an independent review. Findings are reported, nothing is fixed |
+| "Implement, review, and fix the findings that apply" | The implementer checks each finding against the code, fixes the ones that apply, and records why the others do not |
+| "Implement up to the walkthrough" | All of the above, then re-review, repeating fix and re-review up to three times unless you give a number, then the walkthrough |
+
+If you don't say how far to go, it implements and stops. Dismissed findings are not the implementer's final word: the reviewer re-checks each dismissal on re-review.
 
 ## The eight agents
 
@@ -117,7 +130,7 @@ The tool lists are enforced by Claude Code. Which paths an agent writes and whic
 
 ## The walkthrough
 
-After the final review, the orchestrator turns the reviewed range into one offline HTML file that explains the change in plain language, with the real diff behind expandable sections. The code shown always comes from Git, never from a model.
+When you ask for it, the orchestrator turns the reviewed range into one offline HTML file that explains the change in plain language, with the real diff behind expandable sections. The code shown always comes from Git, never from a model.
 
 ```bash
 python3 walkthrough.py extract --base <sha> --final <sha> --inputs inputs.json --out evidence.json
@@ -126,7 +139,8 @@ python3 walkthrough.py render --evidence evidence.json --narrative narrative.jso
 
 - `extract` reads the two commits from Git objects, ignores repository-configured diff programs, masks likely secrets, and records anything it could not show
 - `mestre-walkthrough-author` then writes `narrative.json`, which may only point at evidence IDs
-- `render` refuses unless hashes, commit IDs, references, and file coverage all agree and the review found no blocking problems. The page has no script and loads nothing from the network
+- `render` refuses unless hashes, commit IDs, references, and file coverage all agree. The page has no script and loads nothing from the network
+- If the last review still has blocking findings, the walkthrough is produced with `--diagnostic`: it is labeled as not a clean review and lists the open findings first
 
 Check results are copied from the execution log, not run by the script, and secret masking is pattern-based, so look a walkthrough over before sharing it. The rules and current limits are in the [walkthrough design](skills/mestre-harness/walkthrough/DESIGN.md).
 
@@ -151,4 +165,4 @@ Related files: [orchestrator](skills/mestre-harness/SKILL.md), [handoff contract
 
 ## What has been checked
 
-The setup script was exercised against throwaway repositories: install, update, status, quiet worktree install, worktree removal, uninstall, and refusal on tracked paths. The pack has structural and consistency checks, including eight valid frontmatter blocks, local links, and sample hashes. The walkthrough generator has 48 automated tests against throwaway repositories and was used once by hand on this repository's own history. [Validation details](docs/VALIDATION.md) distinguish these from a live test. No `/mestre-harness` or `/mestre-wt` session or real task has been run.
+The setup script was exercised against throwaway repositories: install, update, status, quiet worktree install, worktree removal, uninstall, and refusal on tracked paths. The pack has structural and consistency checks, including eight valid frontmatter blocks, local links, and sample hashes. The walkthrough generator has 49 automated tests against throwaway repositories and was used once by hand on this repository's own history. [Validation details](docs/VALIDATION.md) distinguish these from a live test. No `/mestre-harness` or `/mestre-wt` session or real task has been run.

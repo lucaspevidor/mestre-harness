@@ -56,13 +56,32 @@ Bound each critic to one full pass plus one targeted follow-up when needed. Do n
 
 ## Direct implementation path
 
-An explicit small implementation request may authorize immediate work without the full planning ceremony. First record the outcome, scope, base, relevant map/conventions, acceptance checks, and exclusions in a short plan. Escalate to planning when scope is unclear, cross-cutting, risky, or has material product/security/data tradeoffs. Do not bypass an explicit planning-only request. Use the implementer and independent reviewer even on the light path.
+An explicit small implementation request may authorize immediate work without the full planning ceremony. First record the outcome, scope, base, relevant map/conventions, acceptance checks, and exclusions in a short plan. Escalate to planning when scope is unclear, cross-cutting, risky, or has material product/security/data tradeoffs. Do not bypass an explicit planning-only request. Use the implementer even on the light path; the execution stages below apply the same way.
 
 ## Handoffs and token discipline
 
 Each subagent has isolated context. Supply the goal, task/phase, scope and exclusions, actual input artifact paths, the one output path the agent may write, exact plan version and relevant IDs, Git base/current SHA when applicable, essential user decisions, allowed actions, expected output, and stop conditions. Use the handoff contract at `skill_root/contracts/handoff.md` and point agents at the templates under `skill_root/templates/`; do not assume the worker saw the conversation or another worker's result.
 
 Pass paths, not pasted contents: each agent reads its inputs from disk, writes its own artifact, and replies with a short envelope. Read an artifact yourself only when you need its detail to decide or to present it, and do not re-emit it to save or forward it. Pass the compact map and only needed details. Cite paths, symbols, line ranges, step IDs, and evidence IDs instead of repeating code. Ask for focused reads and concise structured findings. Soft report budgets guide summaries, never suppress critical evidence, blockers, or unresolved findings; put overflow in an explicitly named artifact or ask for a scoped continuation. Parallelize independent read-only questions only; keep plan mutations and implementation serial.
+
+## Execution stages
+
+After approval, run only the stages the user asks for, in this order, and stop after the last one requested. Never start a later stage because it would be useful; end your report with one line naming the stages that did not run.
+
+1. **Implement:** `mestre-implementer` builds the approved scope with local commits
+2. **Review:** `mestre-reviewer` reviews base to current. You report its verdict and findings. Nothing is fixed
+3. **Fix:** the implementer checks each finding against the code, fixes the ones that apply, and records why the others do not
+4. **Re-review:** the reviewer re-reviews the fixes and the dismissed findings. Stages 3 and 4 repeat while blocking findings remain, for at most three cycles unless the user gives a number
+5. **Walkthrough:** the generator and `mestre-walkthrough-author` produce the HTML for the last reviewed range
+
+Asking for a later stage includes the ones before it:
+
+- "run the implementation": stage 1
+- "implement, then review": stages 1 and 2
+- "implement, review, and fix the findings that apply": stages 1 to 3
+- "implement up to the walkthrough": stages 1 to 5
+
+If the request does not say how far to go, run stage 1 only. The user may also ask for a single stage on existing work, such as a review of commits already made. Check that its inputs exist and say what is missing; do not invent them.
 
 ## Implementation and commits
 
@@ -72,23 +91,27 @@ Commit only owned changes. Never use blanket staging to absorb existing changes.
 
 Keep approved scope and an execution log. Ordinary implementation details may evolve within scope; new requirements, risky migrations, removals, or material tradeoffs require a decision before dependent work. No push or PR without separate explicit approval covering that action.
 
-## Independent review and bounded repair
+## Review
 
-Record the exact reviewed SHA after implementation. Check with a `--stat` or `--name-status` diff of base to reviewed that the range includes only the intended task; do not rely on the plan or implementer's summary. Give `mestre-reviewer` the base and reviewed SHA, the execution log with check evidence, applicable documented standards, and the report path. It produces the complete diff and changed-file inventory itself with read-only Git and reads source at the reviewed revision, so do not paste the diff into the handoff. It may challenge the plan and inspect surrounding code and callers.
+When a review is requested, record the exact reviewed SHA. Check with a `--stat` or `--name-status` diff of base to reviewed that the range includes only the intended task; do not rely on the plan or implementer's summary. Give `mestre-reviewer` the base and reviewed SHA, the execution log with check evidence, applicable documented standards, and the report path. It produces the complete diff and changed-file inventory itself with read-only Git and reads source at the reviewed revision, so do not paste the diff into the handoff. It may challenge the plan and inspect surrounding code and callers.
 
 Review bugs, security, regressions, missing tests, and conformance to documented conventions. Distinguish confidence and severity. If checks are missing, name the exact commands the reviewer may rerun in the handoff, or have them run under your own authority. The reviewer never edits code or changes Git state, and it states which results were supplied, inspected, rerun, or not run.
 
-For in-scope defects, authorize the implementer to repair, rerun affected checks, and make follow-up local commits. Then record the new SHA and request targeted re-review of that range. Allow at most two repair/re-review cycles after the initial review. If unresolved, stop and show the remaining findings or ask for a revised approach. Never convert "budget exhausted" into "approved." Every later edit invalidates the relevant prior review/check result.
+## Fixes and re-review
+
+When fixes are requested, hand `mestre-implementer` the review report path. It verifies each finding against the code before changing anything, fixes the findings that apply, reruns affected checks, makes follow-up local commits, and records a disposition for every finding ID in the execution log: fixed with its commit, or not applicable with the evidence. A finding that needs a new requirement or tradeoff comes back to you as a decision for the user.
+
+When re-review is requested, record the new SHA and ask the reviewer for a targeted re-review of that range and of each dismissed finding. The reviewer keeps a finding open when the dismissal does not hold. Repeat fix and re-review while blocking findings remain, for at most three cycles after the first review unless the user set another number. If findings remain after the last cycle, show them. Never convert "budget exhausted" into "approved." Every later edit invalidates the relevant prior review/check result.
 
 ## Walkthrough and final result
 
-Build the walkthrough only after the final diff review returns no blocking findings, for that exact base/final pair, with `skill_root/walkthrough/walkthrough.py` (Python 3, standard library only). Code and diff text come from the script, never from an LLM.
+Build the walkthrough only when the user asks for it, with `skill_root/walkthrough/walkthrough.py` (Python 3, standard library only). It needs a review of the exact base/final pair. If there is none, say so and ask whether to run the review first; never write a review record for a review that did not happen. Code and diff text come from the script, never from an LLM.
 
 1. **Inputs:** write `task_root/walkthrough-inputs.json` following `skill_root/walkthrough/inputs.schema.json`: why the base was chosen, the review record (reviewed base and final SHA, verdict in the schema's hyphenated form, summary, unresolved findings, coverage limits), and every check from the execution log with its recorded status, tested revision, exit code, time, and output. Copy results as recorded; never upgrade a failed, blocked, or not-run check
 2. **Extract:** `python3 skill_root/walkthrough/walkthrough.py extract --base <base_sha> --final <final_sha> --inputs task_root/walkthrough-inputs.json --out task_root/evidence.json`. It prints the evidence SHA-256 and counts of files, omissions, and redactions
 3. **Narrate:** hand `mestre-walkthrough-author` the evidence path, that SHA-256, the narrative schema path, and the output path `task_root/narrative.json`. If it asks for more source, rerun extract with `--source PATH:base|final:START-END` and give it the new SHA-256
 4. **Render:** `python3 skill_root/walkthrough/walkthrough.py render --evidence task_root/evidence.json --narrative task_root/narrative.json --out task_root/walkthrough.html`. It validates first and prints every problem. Send narrative problems back to the author once; if it still fails, report the errors instead of editing the JSON yourself
 
-Render refuses a review verdict other than `no-blocking-findings-in-inspected-scope`; do not work around it. The script reads committed objects only, so uncommitted task changes block the walkthrough until they are committed under the approved workflow, and any commit after extraction needs a new review and a new extraction. Redaction is pattern-based and incomplete: tell the user to look the file over before sharing it. Keep the HTML local; publishing it needs separate approval. Rules and limits are in `skill_root/walkthrough/DESIGN.md`.
+Render refuses a review verdict other than `no-blocking-findings-in-inspected-scope`. When the user asked for the walkthrough and the last review still has blocking findings or incomplete evidence, add `--diagnostic`: the page is then labeled as not a clean review and lists the open findings first. Tell the user that is what they got. Do not use `--diagnostic` to get past any other refusal. The script reads committed objects only, so uncommitted task changes block the walkthrough until they are committed under the approved workflow, and any commit after extraction needs a new review and a new extraction. Redaction is pattern-based and incomplete: tell the user to look the file over before sharing it. Keep the HTML local; publishing it needs separate approval. Rules and limits are in `skill_root/walkthrough/DESIGN.md`.
 
-Conclude with the outcome, local milestone commits, exact review base/final SHA, checks and limits, remaining decisions/findings, and the local walkthrough path if render succeeded. Update only affected map entries. Do not claim a push, PR, full test pass, or deployment that did not happen.
+Conclude with the outcome, the stages that ran and the ones that did not, local milestone commits, exact review base/final SHA, checks and limits, remaining decisions/findings, and the local walkthrough path if render succeeded. Update only affected map entries. Do not claim a push, PR, full test pass, or deployment that did not happen.

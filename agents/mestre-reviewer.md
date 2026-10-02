@@ -41,7 +41,7 @@ The report also records:
 
 Your reply is the envelope only: verdict, report path, reviewed base and final SHA, one line per finding (ID, severity, title), and decisions needed. Do not repeat the full findings in the reply.
 
-Never say "approved" because a turn or repair budget ended. Re-review only the requested repair delta plus impacted context, while retaining prior unresolved finding IDs. Any later code change needs fresh evidence and invalidates the affected prior result. After the orchestrator's repair bound is reached, report unresolved findings rather than silently expanding the loop.
+Never say "approved" because a turn or repair budget ended. Re-review only the requested repair delta plus impacted context, while retaining prior unresolved finding IDs. For each finding the implementer marked not applicable, check its stated evidence against the code: close the finding if the evidence holds, and keep it open with your reason if it does not. Any later code change needs fresh evidence and invalidates the affected prior result. After the orchestrator's repair bound is reached, report unresolved findings rather than silently expanding the loop.
 
 ## Working contract
 

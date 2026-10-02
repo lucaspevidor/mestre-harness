@@ -247,6 +247,19 @@ class RenderTests(unittest.TestCase):
         self.assertIn("\\x1b[31mred\\u202e", page)
         self.assertEqual(page.count("<title>"), 1)
 
+    def test_unclean_review_renders_only_as_a_labeled_diagnostic(self):
+        def request_changes(evidence):
+            evidence["review"].update(verdict="changes-requested", unresolved_findings=["R-01 off-by-one in greet"])
+        data = bundle(request_changes)
+        with self.assertRaises(wt.WalkthroughError):
+            wt.load_bundle(*data, allow_synthetic=True)
+        page = wt.render_html(*wt.load_bundle(*data, allow_synthetic=True, diagnostic=True))
+        self.assertIn("<title>[SYNTHETIC] [DIAGNOSTIC] ", page)
+        self.assertIn("NOT A CLEAN REVIEW. The review verdict is changes-requested.", page)
+        self.assertLess(page.index("Open review findings"), page.index('id="overview"'))
+        self.assertIn("R-01 off-by-one in greet", page)
+        self.assertNotIn("DIAGNOSTIC", self.render())
+
     def test_incomplete_evidence_is_announced(self):
         def add_omission(evidence):
             evidence["files"][0]["evidence_ids"].append("E05")

@@ -27,7 +27,7 @@ A check from before a later edit needs re-evaluation. Record never-run checks ho
 
 ## Review and repair cycles
 
-Initial review plus at most two repair/re-review cycles. For each: base/review SHA, review report path, reviewer verdict/coverage, findings and disposition, repair commits, rerun checks, and remaining issues. Budget exhaustion is unresolved, not approval.
+Record only the stages that ran, and state which did not. First review, then fix and re-review cycles, at most three unless the user set another number. For each: base/review SHA, review report path, reviewer verdict/coverage, a disposition for every finding ID (fixed with its commit, not applicable with its evidence, or needs a decision), rerun checks, and remaining issues. Budget exhaustion is unresolved, not approval.
 
 ## Final provenance
 

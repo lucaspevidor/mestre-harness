@@ -22,7 +22,7 @@ Status for `walkthrough.py` version 1. Each case ends with how it is covered: **
 - [ ] Every code-specific narrative claim has a relevant reference; arbitrary source paths/URLs are rejected (partial: references are validated and the schema has no path or URL fields (auto); whether a claim is relevant and true is manual)
 - [ ] The displayed check status comes from evidence; not-run/blocked/failed cannot become passed (auto)
 - [ ] A narrative that drops or contradicts failed checks, remaining findings, exclusions, redactions, or limits cannot hide them: the renderer displays those directly from the manifest (auto)
-- [ ] Changes-requested/incomplete review blocks a final walkthrough, while disclosed non-blocking findings remain visible (auto)
+- [ ] Changes-requested/incomplete review blocks a final walkthrough, while disclosed non-blocking findings remain visible (auto; with `--diagnostic` the page renders but is labeled as not a clean review)
 - [ ] Important omissions or unreadable/oversized evidence prevent an unqualified completeness claim (auto)
 
 ## Redaction and HTML safety

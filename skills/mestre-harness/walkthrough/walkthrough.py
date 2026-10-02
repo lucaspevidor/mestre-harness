@@ -526,11 +526,18 @@ def narrative_errors(narrative, evidence, evidence_digest):
     return errors
 
 
-def release_errors(evidence, allow_synthetic):
-    """Conditions under which a bundle must not become a final walkthrough."""
+def review_is_clean(evidence):
+    return evidence["review"]["verdict"] == ACCEPTED_VERDICT
+
+
+def release_errors(evidence, allow_synthetic, diagnostic):
+    """Conditions under which a bundle must not become a walkthrough."""
     errors = []
-    if evidence["review"]["verdict"] != ACCEPTED_VERDICT:
-        errors.append("review verdict is %s; a final walkthrough needs %s" % (evidence["review"]["verdict"], ACCEPTED_VERDICT))
+    if not review_is_clean(evidence) and not diagnostic:
+        errors.append(
+            "review verdict is %s; a final walkthrough needs %s (--diagnostic renders a labeled, non-final page)"
+            % (evidence["review"]["verdict"], ACCEPTED_VERDICT)
+        )
     if evidence["synthetic"] and not allow_synthetic:
         errors.append("evidence is synthetic; pass --allow-synthetic only for demos and tests")
     return errors
@@ -546,14 +553,14 @@ def load_evidence(data):
     return evidence
 
 
-def load_bundle(evidence_data, narrative_data, allow_synthetic):
+def load_bundle(evidence_data, narrative_data, allow_synthetic=False, diagnostic=False):
     """Validate an evidence file and its narrative together. Returns both."""
     evidence = load_evidence(evidence_data)
     narrative = parse_json(narrative_data, "narrative")
     errors = schema_errors(narrative, load_schema(NARRATIVE_SCHEMA), "narrative")
     if not errors:
         errors = narrative_errors(narrative, evidence, sha256_hex(evidence_data))
-    errors.extend(release_errors(evidence, allow_synthetic))
+    errors.extend(release_errors(evidence, allow_synthetic, diagnostic))
     if errors:
         raise WalkthroughError(errors)
     return evidence, narrative
@@ -1246,6 +1253,11 @@ def _notices(evidence):
     notices = []
     if evidence["synthetic"]:
         notices.append("SYNTHETIC EXAMPLE. This is not a real, reviewed change.")
+    if not review_is_clean(evidence):
+        notices.append(
+            "NOT A CLEAN REVIEW. The review verdict is %s. This is a diagnostic walkthrough, not a final reviewed one."
+            % evidence["review"]["verdict"]
+        )
     missing = sum(1 for record in evidence["evidence"] if record["kind"] == "omission" and record["essential_evidence_missing"])
     if missing:
         notices.append("Incomplete: content for %d file(s) could not be shown. See Limits." % missing)
@@ -1261,8 +1273,14 @@ def render_html(evidence, narrative):
     """Render a validated bundle. Call load_bundle first."""
     files = {file["id"]: file for file in evidence["files"]}
     records = {record["id"]: record for record in evidence["evidence"]}
-    title = ("[SYNTHETIC] " if evidence["synthetic"] else "") + narrative["title"]
     review = evidence["review"]
+    labels = ("[SYNTHETIC] " if evidence["synthetic"] else "") + ("" if review_is_clean(evidence) else "[DIAGNOSTIC] ")
+    title = labels + narrative["title"]
+    open_findings = ""
+    if not review_is_clean(evidence):
+        open_findings = "<h2>Open review findings</h2>" + _items(
+            review["unresolved_findings"], "The review listed none; see its summary under Limits."
+        )
     header_facts = [
         ("Repository", evidence["repository_label"]),
         ("Base", evidence["base_sha"]),
@@ -1278,7 +1296,8 @@ def render_html(evidence, narrative):
         '<dl class="meta">%s</dl>' % "".join(
             "<dt>%s</dt><dd class=\"mono\">%s</dd>" % (name, esc(value, keep="")) for name, value in header_facts
         ),
-        "<p>This file is a snapshot of one reviewed range. It does not update when the repository changes.</p></header>",
+        "<p>This file is a snapshot of one reviewed range. It does not update when the repository changes.</p>",
+        open_findings + "</header>",
         '<section id="overview"><h2>Overview</h2>%s</section>' % _prose(narrative["summary"]),
         '<nav aria-label="Sections"><ol>%s</ol></nav>' % nav,
         '<section id="changes"><h2>What changed</h2>%s</section>'
@@ -1329,7 +1348,7 @@ def cmd_extract(args):
 def cmd_validate(args):
     evidence_data = read_file(args.evidence, "evidence")
     if args.narrative:
-        load_bundle(evidence_data, read_file(args.narrative, "narrative"), args.allow_synthetic)
+        load_bundle(evidence_data, read_file(args.narrative, "narrative"), args.allow_synthetic, args.diagnostic)
     else:
         load_evidence(evidence_data)
     print("valid; evidence_sha256: %s" % sha256_hex(evidence_data))
@@ -1337,12 +1356,19 @@ def cmd_validate(args):
 
 def cmd_render(args):
     evidence, narrative = load_bundle(
-        read_file(args.evidence, "evidence"), read_file(args.narrative, "narrative"), args.allow_synthetic
+        read_file(args.evidence, "evidence"), read_file(args.narrative, "narrative"),
+        args.allow_synthetic, args.diagnostic,
     )
     data = render_html(evidence, narrative).encode("utf-8")
     Path(args.out).write_bytes(data)
     print("wrote %s" % args.out)
     print("html_sha256: %s" % sha256_hex(data))
+
+
+def _add_release_flags(command):
+    command.add_argument("--allow-synthetic", action="store_true", help="accept the hand-written sample; demos and tests only")
+    command.add_argument("--diagnostic", action="store_true",
+                         help="render even when the review is not clean; the page is labeled as non-final")
 
 
 def build_parser():
@@ -1365,14 +1391,14 @@ def build_parser():
     validate = commands.add_parser("validate", help="check evidence, and a narrative if given")
     validate.add_argument("--evidence", required=True)
     validate.add_argument("--narrative")
-    validate.add_argument("--allow-synthetic", action="store_true")
+    _add_release_flags(validate)
     validate.set_defaults(run=cmd_validate)
 
     render = commands.add_parser("render", help="validate, then write one offline HTML file")
     render.add_argument("--evidence", required=True)
     render.add_argument("--narrative", required=True)
     render.add_argument("--out", required=True)
-    render.add_argument("--allow-synthetic", action="store_true")
+    _add_release_flags(render)
     render.set_defaults(run=cmd_render)
     return parser
 

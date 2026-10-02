@@ -110,7 +110,7 @@ Output should be one HTML file with no runtime network or filesystem reads. Copy
 
 - **Checks are supplied, not run.** The extractor takes check results from the inputs file and labels them as supplied. A check applies to the final code only when its recorded revision equals `final_sha`; there is no identical-tree proof
 - **Redaction is pattern-based.** Files whose names match a sensitive-path list are omitted, and common token formats, private key blocks, quoted secrets, and credentials in URLs are masked. It can miss secrets and can mask harmless text. There is no built-in human review step
-- **No diagnostic mode.** A review that requests changes or has incomplete evidence makes `render` refuse; there is no clearly labeled partial report
+- **Diagnostic mode is minimal.** A review that requests changes or has incomplete evidence makes `render` refuse unless `--diagnostic` is passed. The page is then titled and labeled as not a clean review and lists the open findings first. It still needs a real review record for the exact range
 - **Ancestry is required.** A base that is not an ancestor of the final commit is refused. Merge commits inside the range are fine
 - **Diff hunks by default.** Source ranges are added only on request with `--source`. Whole-file additions and deletions are read with a literal pathspec; every other file is diffed blob to blob, so path attributes cannot affect it
 - **Metadata instead of content** for binary files, symbolic links, submodules, files that are not valid UTF-8, and anything over the size limits. Generated files are not detected; the author classifies them
