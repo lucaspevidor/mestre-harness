@@ -14,12 +14,12 @@ The harness is installed per repository and stays local: nothing it adds is trac
 
 Open Claude Code in the repository you want the harness in and say:
 
-> Install mestre-harness from `<this repository's URL>` into the current directory.
+> Install mestre-harness from https://github.com/lucaspevidor/mestre-harness into the current directory.
 
 **Instructions for the agent doing the install.** Run these two commands and nothing else:
 
 ```bash
-if [ -d ~/.mestre-harness/.git ]; then git -C ~/.mestre-harness pull --ff-only; else git clone <this repository's URL> ~/.mestre-harness; fi
+if [ -d ~/.mestre-harness/.git ]; then git -C ~/.mestre-harness pull --ff-only; else git clone https://github.com/lucaspevidor/mestre-harness.git ~/.mestre-harness; fi
 ~/.mestre-harness/setup.sh "$PWD"
 ```
 
@@ -30,7 +30,7 @@ Do not copy harness files by hand, edit any `.gitignore`, change Claude Code set
 ### By hand
 
 ```bash
-git clone <this repository's URL> ~/.mestre-harness
+git clone https://github.com/lucaspevidor/mestre-harness.git ~/.mestre-harness
 ~/.mestre-harness/setup.sh ~/repos/my-project          # install or update
 ~/.mestre-harness/setup.sh status ~/repos/my-project
 ~/.mestre-harness/setup.sh uninstall ~/repos/my-project           # keeps .agent-work/
