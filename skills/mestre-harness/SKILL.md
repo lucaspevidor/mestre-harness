@@ -18,7 +18,7 @@ If the request above is empty, confirm in one line that the harness is active an
 - `skill_root` is `${CLAUDE_SKILL_DIR}`. Contracts, templates, and the walkthrough design live there. Treat it as read-only
 - `work_root` is `.agent-work/` at the repository root. `map_root` is `.agent-work/repo-map` and `task_root` is `.agent-work/tasks/<task-id>`
 - The eight `mestre-*` agents must be available as subagent types. If they are not, stop and tell the user to run the mestre-harness setup script for this repository and start a new session. Do not substitute other agents
-- In a Git repository, confirm once with `git check-ignore -q .agent-work` that the workspace is ignored. If it is not, tell the user and continue; do not edit any ignore file yourself
+- In a Git repository, the workspace must be ignored. If `git status --short -- .agent-work` ever lists it as untracked (`??`), tell the user once and continue; do not edit any ignore file yourself
 
 ## Purpose and authority
 

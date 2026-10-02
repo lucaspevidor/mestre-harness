@@ -294,6 +294,11 @@ class RedactionTests(unittest.TestCase):
         self.assert_masked("url = https://user:s3cr3tpw@example.invalid/db", "s3cr3tpw")
         self.assert_masked("key = sk-" + "x" * 30, "sk-" + "x" * 30)
 
+    def test_a_secret_matching_two_patterns_is_counted_once(self):
+        sanitized, found = wt.redact_text('API_TOKEN = "ghp_%s"\n' % ("a1B2" * 9))
+        self.assertEqual(sanitized, 'API_TOKEN = "%s"\n' % wt.REDACTION_MARK)
+        self.assertEqual(dict(found), {"github-token": 1})
+
     def test_ordinary_code_is_left_alone(self):
         text = "def greet(name):\n    token = read_token()\n    return name.strip()\n"
         self.assertEqual(wt.redact_text(text), (text, {}))

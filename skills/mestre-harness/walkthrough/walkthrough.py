@@ -621,8 +621,13 @@ def _redact_line(body, in_key_block, found):
         found["possible-key-material"] += 1
         return REDACTION_MARK, False
     for label, pattern, group in _SECRET_PATTERNS:
-        body, count = pattern.subn(lambda match, group=group: _mask_group(match, group), body)
-        found[label] += count
+        def mask(match, label=label, group=group):
+            if match.group(group) == REDACTION_MARK:
+                return match.group(0)  # already masked by an earlier pattern
+            found[label] += 1
+            return _mask_group(match, group)
+
+        body = pattern.sub(mask, body)
     return body, False
 
 
