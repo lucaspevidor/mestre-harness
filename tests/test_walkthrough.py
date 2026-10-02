@@ -129,9 +129,10 @@ class BundleValidationTests(unittest.TestCase):
     def test_object_format_must_fit_the_ids(self):
         self.assert_rejected("does not fit object format", lambda e: e.update(object_format="sha256"))
 
-    def test_review_that_requests_changes_blocks_the_walkthrough(self):
+    def test_review_is_optional_but_must_cover_the_exact_range(self):
+        wt.load_bundle(*bundle(lambda e: e.update(review=None)), allow_synthetic=True)
         for verdict in ("changes-requested", "incomplete-evidence"):
-            self.assert_rejected("review verdict is " + verdict, lambda e, v=verdict: e["review"].update(verdict=v))
+            wt.load_bundle(*bundle(lambda e, v=verdict: e["review"].update(verdict=v)), allow_synthetic=True)
 
     def test_file_coverage_must_be_complete_and_single(self):
         self.assert_rejected("F01 must be covered exactly once, found 0",
@@ -247,18 +248,24 @@ class RenderTests(unittest.TestCase):
         self.assertIn("\\x1b[31mred\\u202e", page)
         self.assertEqual(page.count("<title>"), 1)
 
-    def test_unclean_review_renders_only_as_a_labeled_diagnostic(self):
+    def test_page_labels_itself_by_review_state(self):
+        clean = self.render()
+        self.assertNotIn("NOT REVIEWED", clean)
+        self.assertNotIn("NOT A CLEAN REVIEW", clean)
+
         def request_changes(evidence):
             evidence["review"].update(verdict="changes-requested", unresolved_findings=["R-01 off-by-one in greet"])
-        data = bundle(request_changes)
-        with self.assertRaises(wt.WalkthroughError):
-            wt.load_bundle(*data, allow_synthetic=True)
-        page = wt.render_html(*wt.load_bundle(*data, allow_synthetic=True, diagnostic=True))
-        self.assertIn("<title>[SYNTHETIC] [DIAGNOSTIC] ", page)
-        self.assertIn("NOT A CLEAN REVIEW. The review verdict is changes-requested.", page)
-        self.assertLess(page.index("Open review findings"), page.index('id="overview"'))
-        self.assertIn("R-01 off-by-one in greet", page)
-        self.assertNotIn("DIAGNOSTIC", self.render())
+        unclean = self.render(request_changes)
+        self.assertIn("<title>[SYNTHETIC] [REVIEW NOT CLEAN] ", unclean)
+        self.assertIn("NOT A CLEAN REVIEW. The review verdict is changes-requested.", unclean)
+        self.assertLess(unclean.index("Open review findings"), unclean.index('id="overview"'))
+        self.assertIn("R-01 off-by-one in greet", unclean)
+
+        unreviewed = self.render(lambda e: e.update(review=None))
+        self.assertIn("<title>[SYNTHETIC] [NOT REVIEWED] ", unreviewed)
+        self.assertIn("NOT REVIEWED. No review was run for this range.", unreviewed)
+        self.assertNotIn("Open review findings", unreviewed)
+        self.assertNotIn("Unresolved findings", unreviewed)
 
     def test_incomplete_evidence_is_announced(self):
         def add_omission(evidence):
@@ -341,16 +348,14 @@ class Repo:
         return self.git("rev-parse", "HEAD")
 
 
-def inputs_for(base, final, checks=(), verdict=wt.ACCEPTED_VERDICT):
-    return {
-        "base_selection_reason": "HEAD when the task started.",
-        "review": {
-            "reviewed_base_sha": base, "reviewed_sha": final, "verdict": verdict,
+def inputs_for(base, final, checks=(), reviewed=True):
+    inputs = {"base_selection_reason": "HEAD when the task started.", "checks": list(checks), "coverage_limits": []}
+    if reviewed:
+        inputs["review"] = {
+            "reviewed_base_sha": base, "reviewed_sha": final, "verdict": wt.CLEAN_VERDICT,
             "report_summary": "Reviewed the full range.", "unresolved_findings": [], "coverage_limits": [],
-        },
-        "checks": list(checks),
-        "coverage_limits": [],
-    }
+        }
+    return inputs
 
 
 def check_result(status="passed", revision=None, exit_code=0, output="ok\n"):
@@ -636,6 +641,18 @@ class ExtractionIsolationTests(unittest.TestCase):
         evidence = wt.build_evidence(repo.root, base, final, inputs_for(base, final))
         self.assertEqual(evidence["object_format"], "sha256")
         wt.load_evidence(wt.serialize(evidence))
+
+    def test_unreviewed_range_becomes_a_labeled_walkthrough(self):
+        repo = Repo(self.tmp / "repo")
+        base, final = self.two_commits(repo)
+        inputs = inputs_for(base, final, reviewed=False)
+        self.assertEqual(wt.schema_errors(inputs, wt.load_schema(wt.INPUTS_SCHEMA)), [])
+        evidence = wt.build_evidence(repo.root, base, final, inputs)
+        self.assertIsNone(evidence["review"])
+        data = wt.serialize(evidence)
+        page = wt.render_html(*wt.load_bundle(data, wt.serialize(narrative_for(evidence, data))))
+        self.assertIn("<title>[NOT REVIEWED] Test change</title>", page)
+        self.assertIn("No review was run for this range.", page)
 
     def test_empty_range_and_non_repository(self):
         repo = Repo(self.tmp / "repo")

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Git walkthrough evidence design v1",
-  "description": "Design contract only. Cross-record integrity, hashes, Git facts, ranges, secrecy, and review provenance require semantic validation by future tooling.",
+  "description": "Evidence for one committed base-to-final range. review is null when no review was run. Cross-record integrity, hashes, Git facts, ranges, and secrecy are enforced by walkthrough.py, not by this schema.",
   "type": "object",
   "additionalProperties": false,
   "properties": {
@@ -34,52 +34,59 @@
       "minLength": 1
     },
     "review": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "reviewed_base_sha": {
-          "type": "string",
-          "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$"
-        },
-        "reviewed_sha": {
-          "type": "string",
-          "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$"
-        },
-        "verdict": {
-          "enum": [
-            "no-blocking-findings-in-inspected-scope",
-            "changes-requested",
-            "incomplete-evidence"
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "reviewed_base_sha": {
+              "type": "string",
+              "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$"
+            },
+            "reviewed_sha": {
+              "type": "string",
+              "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$"
+            },
+            "verdict": {
+              "enum": [
+                "no-blocking-findings-in-inspected-scope",
+                "changes-requested",
+                "incomplete-evidence"
+              ]
+            },
+            "report_summary": {
+              "type": "string",
+              "minLength": 1
+            },
+            "unresolved_findings": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "minItems": 0
+            },
+            "coverage_limits": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "minItems": 0
+            }
+          },
+          "required": [
+            "reviewed_base_sha",
+            "reviewed_sha",
+            "verdict",
+            "report_summary",
+            "unresolved_findings",
+            "coverage_limits"
           ]
         },
-        "report_summary": {
-          "type": "string",
-          "minLength": 1
-        },
-        "unresolved_findings": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          },
-          "minItems": 0
-        },
-        "coverage_limits": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          },
-          "minItems": 0
+        {
+          "type": "null"
         }
-      },
-      "required": [
-        "reviewed_base_sha",
-        "reviewed_sha",
-        "verdict",
-        "report_summary",
-        "unresolved_findings",
-        "coverage_limits"
       ]
     },
     "worktree": {

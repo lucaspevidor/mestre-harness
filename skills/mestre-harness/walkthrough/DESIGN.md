@@ -4,7 +4,7 @@
 
 **Implemented as [walkthrough.py](walkthrough.py), version 1.** This document is the specification it follows; [Version 1 limits](#version-1-limits) lists what it does not do yet. The script is one Python 3 file with no dependencies and three commands: `extract`, `validate`, and `render`.
 
-The goal is one private, self-contained HTML file that explains the exact final reviewed change. A reader gets a short plain-language account first and can expand real code/diff evidence when useful. It works from a local file with the network disabled.
+The goal is one private, self-contained HTML file that explains one exact committed range. A review is optional: the page states whether the range was reviewed and how that review ended, so it can never look more vetted than it is. A reader gets a short plain-language account first and can expand real code/diff evidence when useful. It works from a local file with the network disabled.
 
 ## Division of responsibility
 
@@ -47,7 +47,7 @@ A checkout may remain dirty only with explicitly identified excluded changes tha
 
 ### Final capture
 
-Freeze `final_sha` after independent review and any bounded repairs. Require the review to name both the exact reviewed base and final revisions; a review of only the last commit does not cover the whole branch range. The review can have disclosed non-blocking findings, but changes-requested or incomplete-evidence status blocks a "final reviewed walkthrough." A partial diagnostic report may be useful only if clearly labeled and explicitly requested; it must not masquerade as final.
+Capture `final_sha` when the walkthrough is requested. If a review was run, require it to name both the exact reviewed base and final revisions; a review of only the last commit does not cover the whole range, and a review of another range is not recorded at all. The page is labeled from the review state: clean, not clean with the open findings shown first, or not reviewed. It never presents an unreviewed or unresolved change as a clean one.
 
 Any later edit/commit invalidates the relevant review and walkthrough provenance. Re-extract and re-review affected content; never relabel old evidence with the new SHA. The offline file remains an honest historical snapshot and cannot know automatically that the repository later changed.
 
@@ -93,7 +93,7 @@ Before rendering:
 
 - Parse JSON against the pinned schemas with no automatic network resolution of `$schema` or `$ref`
 - Recompute the exact evidence-file hash and all evidence text hashes; require the narrative binding to match
-- Verify identical base/final IDs, object format, matching `review.reviewed_base_sha` and `review.reviewed_sha`, acceptable final review status, no production synthetic flag, and unique IDs
+- Verify identical base/final IDs, object format, matching `review.reviewed_base_sha` and `review.reviewed_sha` when a review is recorded, no production synthetic flag, and unique IDs
 - Require each narrative reference to exist and each changed file to be covered; reject duplicate/missing coverage and unresolved IDs
 - Validate old/new path and blob presence against file status, source-side/revision/blob identity, nonnegative hunk ranges, valid source line ranges, and line-count/range consistency
 - Validate check applicability and displayed status from the evidence itself; the author cannot turn `not-run` into `passed`
@@ -110,7 +110,7 @@ Output should be one HTML file with no runtime network or filesystem reads. Copy
 
 - **Checks are supplied, not run.** The extractor takes check results from the inputs file and labels them as supplied. A check applies to the final code only when its recorded revision equals `final_sha`; there is no identical-tree proof
 - **Redaction is pattern-based.** Files whose names match a sensitive-path list are omitted, and common token formats, private key blocks, quoted secrets, and credentials in URLs are masked. It can miss secrets and can mask harmless text. There is no built-in human review step
-- **Diagnostic mode is minimal.** A review that requests changes or has incomplete evidence makes `render` refuse unless `--diagnostic` is passed. The page is then titled and labeled as not a clean review and lists the open findings first. It still needs a real review record for the exact range
+- **Review state is a label, not a gate.** `review` is null in the manifest when no review was run. The title and a banner say "not reviewed" or "review not clean", and open findings are listed first. A review record, when present, must name the exact base and final commits
 - **Ancestry is required.** A base that is not an ancestor of the final commit is refused. Merge commits inside the range are fine
 - **Diff hunks by default.** Source ranges are added only on request with `--source`. Whole-file additions and deletions are read with a literal pathspec; every other file is diffed blob to blob, so path attributes cannot affect it
 - **Metadata instead of content** for binary files, symbolic links, submodules, files that are not valid UTF-8, and anything over the size limits. Generated files are not detected; the author classifies them

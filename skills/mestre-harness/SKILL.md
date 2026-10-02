@@ -72,14 +72,15 @@ After approval, run only the stages the user asks for, in this order, and stop a
 2. **Review:** `mestre-reviewer` reviews base to current. You report its verdict and findings. Nothing is fixed
 3. **Fix:** the implementer checks each finding against the code, fixes the ones that apply, and records why the others do not
 4. **Re-review:** the reviewer re-reviews the fixes and the dismissed findings. Stages 3 and 4 repeat while blocking findings remain, for at most three cycles unless the user gives a number
-5. **Walkthrough:** the generator and `mestre-walkthrough-author` produce the HTML for the last reviewed range
+5. **Walkthrough:** the generator and `mestre-walkthrough-author` produce the HTML for the committed range
 
-Asking for a later stage includes the ones before it:
+Review, fix, and re-review build on each other, so asking for one includes the earlier ones. The walkthrough needs only committed work: it can follow any stage and labels itself with the review state.
 
 - "run the implementation": stage 1
 - "implement, then review": stages 1 and 2
 - "implement, review, and fix the findings that apply": stages 1 to 3
 - "implement up to the walkthrough": stages 1 to 5
+- "implement and give me a walkthrough": stages 1 and 5; the page is labeled as not reviewed
 
 If the request does not say how far to go, run stage 1 only. The user may also ask for a single stage on existing work, such as a review of commits already made. Check that its inputs exist and say what is missing; do not invent them.
 
@@ -105,13 +106,13 @@ When re-review is requested, record the new SHA and ask the reviewer for a targe
 
 ## Walkthrough and final result
 
-Build the walkthrough only when the user asks for it, with `skill_root/walkthrough/walkthrough.py` (Python 3, standard library only). It needs a review of the exact base/final pair. If there is none, say so and ask whether to run the review first; never write a review record for a review that did not happen. Code and diff text come from the script, never from an LLM.
+Build the walkthrough only when the user asks for it, with `skill_root/walkthrough/walkthrough.py` (Python 3, standard library only). It works on any committed base/final pair, reviewed or not. Code and diff text come from the script, never from an LLM.
 
-1. **Inputs:** write `task_root/walkthrough-inputs.json` following `skill_root/walkthrough/inputs.schema.json`: why the base was chosen, the review record (reviewed base and final SHA, verdict in the schema's hyphenated form, summary, unresolved findings, coverage limits), and every check from the execution log with its recorded status, tested revision, exit code, time, and output. Copy results as recorded; never upgrade a failed, blocked, or not-run check
+1. **Inputs:** write `task_root/walkthrough-inputs.json` following `skill_root/walkthrough/inputs.schema.json`: why the base was chosen and every check from the execution log with its recorded status, tested revision, exit code, time, and output. Copy results as recorded; never upgrade a failed, blocked, or not-run check. Add the review record only if a review of exactly this base/final pair was run: reviewed base and final SHA, verdict in the schema's hyphenated form, summary, unresolved findings, coverage limits. Otherwise leave `review` out; never write one for a review that did not happen or that covered another range
 2. **Extract:** `python3 skill_root/walkthrough/walkthrough.py extract --base <base_sha> --final <final_sha> --inputs task_root/walkthrough-inputs.json --out task_root/evidence.json`. It prints the evidence SHA-256 and counts of files, omissions, and redactions
 3. **Narrate:** hand `mestre-walkthrough-author` the evidence path, that SHA-256, the narrative schema path, and the output path `task_root/narrative.json`. If it asks for more source, rerun extract with `--source PATH:base|final:START-END` and give it the new SHA-256
 4. **Render:** `python3 skill_root/walkthrough/walkthrough.py render --evidence task_root/evidence.json --narrative task_root/narrative.json --out task_root/walkthrough.html`. It validates first and prints every problem. Send narrative problems back to the author once; if it still fails, report the errors instead of editing the JSON yourself
 
-Render refuses a review verdict other than `no-blocking-findings-in-inspected-scope`. When the user asked for the walkthrough and the last review still has blocking findings or incomplete evidence, add `--diagnostic`: the page is then labeled as not a clean review and lists the open findings first. Tell the user that is what they got. Do not use `--diagnostic` to get past any other refusal. The script reads committed objects only, so uncommitted task changes block the walkthrough until they are committed under the approved workflow, and any commit after extraction needs a new review and a new extraction. Redaction is pattern-based and incomplete: tell the user to look the file over before sharing it. Keep the HTML local; publishing it needs separate approval. Rules and limits are in `skill_root/walkthrough/DESIGN.md`.
+The page labels itself from the evidence: nothing extra after a clean review, "not a clean review" with the open findings first when findings remain, and "not reviewed" when there was no review. Tell the user which one they got. Render still refuses mismatched hashes or commit IDs, broken references, and incomplete file coverage; fix the cause, never the JSON. The script reads committed objects only, so uncommitted task changes block the walkthrough until they are committed under the approved workflow, and any commit after extraction needs a new extraction, plus a new review if the page is to carry one. Redaction is pattern-based and incomplete: tell the user to look the file over before sharing it. Keep the HTML local; publishing it needs separate approval. Rules and limits are in `skill_root/walkthrough/DESIGN.md`.
 
 Conclude with the outcome, the stages that ran and the ones that did not, local milestone commits, exact review base/final SHA, checks and limits, remaining decisions/findings, and the local walkthrough path if render succeeded. Update only affected map entries. Do not claim a push, PR, full test pass, or deployment that did not happen.

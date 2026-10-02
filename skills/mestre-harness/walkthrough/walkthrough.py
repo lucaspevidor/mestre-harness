@@ -7,6 +7,9 @@ Turns one reviewed Git range into a single offline HTML explanation:
   validate  check evidence (and optionally a narrative) and report every problem
   render    validate, then write one self-contained HTML file
 
+A review is optional. The page states whether the range was reviewed and how
+that review ended, taken from the evidence rather than from the narrative.
+
 Standard library only. The schemas next to this file are the contract; see
 DESIGN.md for the reasoning behind each rule enforced here.
 """
@@ -31,7 +34,7 @@ EVIDENCE_SCHEMA = "evidence.schema.json"
 NARRATIVE_SCHEMA = "narrative.schema.json"
 INPUTS_SCHEMA = "inputs.schema.json"
 
-ACCEPTED_VERDICT = "no-blocking-findings-in-inspected-scope"
+CLEAN_VERDICT = "no-blocking-findings-in-inspected-scope"
 OID_LENGTHS = {"sha1": 40, "sha256": 64}
 
 DEFAULT_CONTEXT_LINES = 3
@@ -450,20 +453,16 @@ def evidence_errors(evidence):
     """Cross-record checks for a schema-valid evidence manifest."""
     errors = []
     oid_length = OID_LENGTHS[evidence["object_format"]]
+    for key in ("base_sha", "final_sha"):
+        if len(evidence[key]) != oid_length:
+            errors.append("%s: does not fit object format %s" % (key, evidence["object_format"]))
     review = evidence["review"]
-    commit_ids = {
-        "base_sha": evidence["base_sha"],
-        "final_sha": evidence["final_sha"],
-        "review.reviewed_base_sha": review["reviewed_base_sha"],
-        "review.reviewed_sha": review["reviewed_sha"],
-    }
-    for label, value in commit_ids.items():
-        if len(value) != oid_length:
-            errors.append("%s: does not fit object format %s" % (label, evidence["object_format"]))
-    if review["reviewed_base_sha"] != evidence["base_sha"]:
-        errors.append("review: reviewed base differs from base_sha")
-    if review["reviewed_sha"] != evidence["final_sha"]:
-        errors.append("review: reviewed revision differs from final_sha")
+    if review is not None:
+        # A review of a different range says nothing about this one.
+        if review["reviewed_base_sha"] != evidence["base_sha"]:
+            errors.append("review: reviewed base differs from base_sha")
+        if review["reviewed_sha"] != evidence["final_sha"]:
+            errors.append("review: reviewed revision differs from final_sha")
 
     worktree = evidence["worktree"]
     if (worktree["state"] == "clean") == bool(worktree["excluded_changes"]):
@@ -526,21 +525,16 @@ def narrative_errors(narrative, evidence, evidence_digest):
     return errors
 
 
-def review_is_clean(evidence):
-    return evidence["review"]["verdict"] == ACCEPTED_VERDICT
+def review_state(evidence):
+    """How far the range was reviewed: "clean", "not-clean", or "not-reviewed".
 
-
-def release_errors(evidence, allow_synthetic, diagnostic):
-    """Conditions under which a bundle must not become a walkthrough."""
-    errors = []
-    if not review_is_clean(evidence) and not diagnostic:
-        errors.append(
-            "review verdict is %s; a final walkthrough needs %s (--diagnostic renders a labeled, non-final page)"
-            % (evidence["review"]["verdict"], ACCEPTED_VERDICT)
-        )
-    if evidence["synthetic"] and not allow_synthetic:
-        errors.append("evidence is synthetic; pass --allow-synthetic only for demos and tests")
-    return errors
+    A walkthrough can be made in any state. The page labels itself from this,
+    so it can never look more reviewed than it is.
+    """
+    review = evidence["review"]
+    if review is None:
+        return "not-reviewed"
+    return "clean" if review["verdict"] == CLEAN_VERDICT else "not-clean"
 
 
 def load_evidence(data):
@@ -553,14 +547,15 @@ def load_evidence(data):
     return evidence
 
 
-def load_bundle(evidence_data, narrative_data, allow_synthetic=False, diagnostic=False):
+def load_bundle(evidence_data, narrative_data, allow_synthetic=False):
     """Validate an evidence file and its narrative together. Returns both."""
     evidence = load_evidence(evidence_data)
     narrative = parse_json(narrative_data, "narrative")
     errors = schema_errors(narrative, load_schema(NARRATIVE_SCHEMA), "narrative")
     if not errors:
         errors = narrative_errors(narrative, evidence, sha256_hex(evidence_data))
-    errors.extend(release_errors(evidence, allow_synthetic, diagnostic))
+    if evidence["synthetic"] and not allow_synthetic:
+        errors.append("evidence is synthetic; pass --allow-synthetic only for demos and tests")
     if errors:
         raise WalkthroughError(errors)
     return evidence, narrative
@@ -975,8 +970,8 @@ def build_evidence(repo, base, final, inputs, sources=(), context=DEFAULT_CONTEX
     require_commit(git, final, "--final", oid_length)
     if not git.succeeds("merge-base", "--is-ancestor", base, final):
         raise WalkthroughError("base is not an ancestor of final; resolve the intended range first")
-    review = inputs["review"]
-    if (review["reviewed_base_sha"], review["reviewed_sha"]) != (base, final):
+    review = inputs.get("review")
+    if review is not None and (review["reviewed_base_sha"], review["reviewed_sha"]) != (base, final):
         raise WalkthroughError("the review record covers a different base or final revision than this range")
 
     check_problems = []
@@ -1209,16 +1204,25 @@ def _verification_html(evidence, narrative, files):
     return "".join(parts)
 
 
+def _review_html(review):
+    if review is None:
+        return "<h3>Review</h3><p>No review was run for this range.</p>"
+    return "".join([
+        "<h3>Review</h3>", _prose(review["report_summary"]),
+        "<h4>Unresolved review findings</h4>", _items(review["unresolved_findings"], "None recorded by the review."),
+        "<h4>Review coverage limits</h4>", _items(review["coverage_limits"]),
+    ])
+
+
 def _limits_html(evidence, narrative):
     """Everything here comes from the manifest, so a narrative cannot hide it."""
     review, worktree = evidence["review"], evidence["worktree"]
     omissions = [record for record in evidence["evidence"] if record["kind"] == "omission"]
     files = {file["id"]: file for file in evidence["files"]}
-    extra_findings = [item for item in narrative["unresolved_findings"] if item not in review["unresolved_findings"]]
+    reviewed_findings = review["unresolved_findings"] if review else []
+    extra_findings = [item for item in narrative["unresolved_findings"] if item not in reviewed_findings]
     parts = [
-        "<h3>Review</h3>", _prose(review["report_summary"]),
-        "<h4>Unresolved review findings</h4>", _items(review["unresolved_findings"], "None recorded by the review."),
-        "<h4>Review coverage limits</h4>", _items(review["coverage_limits"]),
+        _review_html(review),
         "<h3>Uncommitted changes excluded from this walkthrough</h3>",
         _items(worktree["excluded_changes"], "The working tree was clean when evidence was captured."),
         "<h3>Content not shown</h3>",
@@ -1253,11 +1257,11 @@ def _notices(evidence):
     notices = []
     if evidence["synthetic"]:
         notices.append("SYNTHETIC EXAMPLE. This is not a real, reviewed change.")
-    if not review_is_clean(evidence):
-        notices.append(
-            "NOT A CLEAN REVIEW. The review verdict is %s. This is a diagnostic walkthrough, not a final reviewed one."
-            % evidence["review"]["verdict"]
-        )
+    state = review_state(evidence)
+    if state == "not-reviewed":
+        notices.append("NOT REVIEWED. No review was run for this range.")
+    elif state == "not-clean":
+        notices.append("NOT A CLEAN REVIEW. The review verdict is %s." % evidence["review"]["verdict"])
     missing = sum(1 for record in evidence["evidence"] if record["kind"] == "omission" and record["essential_evidence_missing"])
     if missing:
         notices.append("Incomplete: content for %d file(s) could not be shown. See Limits." % missing)
@@ -1269,15 +1273,17 @@ def _notices(evidence):
     return "".join('<p class="notice">%s</p>' % esc(text) for text in notices)
 
 
+_TITLE_LABELS = {"clean": "", "not-clean": "[REVIEW NOT CLEAN] ", "not-reviewed": "[NOT REVIEWED] "}
+
+
 def render_html(evidence, narrative):
     """Render a validated bundle. Call load_bundle first."""
     files = {file["id"]: file for file in evidence["files"]}
     records = {record["id"]: record for record in evidence["evidence"]}
-    review = evidence["review"]
-    labels = ("[SYNTHETIC] " if evidence["synthetic"] else "") + ("" if review_is_clean(evidence) else "[DIAGNOSTIC] ")
-    title = labels + narrative["title"]
+    review, state = evidence["review"], review_state(evidence)
+    title = ("[SYNTHETIC] " if evidence["synthetic"] else "") + _TITLE_LABELS[state] + narrative["title"]
     open_findings = ""
-    if not review_is_clean(evidence):
+    if state == "not-clean":
         open_findings = "<h2>Open review findings</h2>" + _items(
             review["unresolved_findings"], "The review listed none; see its summary under Limits."
         )
@@ -1286,9 +1292,10 @@ def render_html(evidence, narrative):
         ("Base", evidence["base_sha"]),
         ("Final", evidence["final_sha"]),
         ("Base chosen because", evidence["base_selection_reason"]),
-        ("Review verdict", review["verdict"]),
-        ("Unresolved findings", len(review["unresolved_findings"])),
+        ("Review", review["verdict"] if review else "not reviewed"),
     ]
+    if review:
+        header_facts.append(("Unresolved findings", len(review["unresolved_findings"])))
     nav = "".join('<li><a href="#%s">%s</a></li>' % (esc(s["id"]), esc(s["title"], keep="")) for s in narrative["sections"])
     body = [
         "<header><h1>%s</h1>" % esc(title, keep=""),
@@ -1296,7 +1303,7 @@ def render_html(evidence, narrative):
         '<dl class="meta">%s</dl>' % "".join(
             "<dt>%s</dt><dd class=\"mono\">%s</dd>" % (name, esc(value, keep="")) for name, value in header_facts
         ),
-        "<p>This file is a snapshot of one reviewed range. It does not update when the repository changes.</p>",
+        "<p>This file is a snapshot of one commit range. It does not update when the repository changes.</p>",
         open_findings + "</header>",
         '<section id="overview"><h2>Overview</h2>%s</section>' % _prose(narrative["summary"]),
         '<nav aria-label="Sections"><ol>%s</ol></nav>' % nav,
@@ -1348,7 +1355,7 @@ def cmd_extract(args):
 def cmd_validate(args):
     evidence_data = read_file(args.evidence, "evidence")
     if args.narrative:
-        load_bundle(evidence_data, read_file(args.narrative, "narrative"), args.allow_synthetic, args.diagnostic)
+        load_bundle(evidence_data, read_file(args.narrative, "narrative"), args.allow_synthetic)
     else:
         load_evidence(evidence_data)
     print("valid; evidence_sha256: %s" % sha256_hex(evidence_data))
@@ -1356,8 +1363,7 @@ def cmd_validate(args):
 
 def cmd_render(args):
     evidence, narrative = load_bundle(
-        read_file(args.evidence, "evidence"), read_file(args.narrative, "narrative"),
-        args.allow_synthetic, args.diagnostic,
+        read_file(args.evidence, "evidence"), read_file(args.narrative, "narrative"), args.allow_synthetic
     )
     data = render_html(evidence, narrative).encode("utf-8")
     Path(args.out).write_bytes(data)
@@ -1365,21 +1371,15 @@ def cmd_render(args):
     print("html_sha256: %s" % sha256_hex(data))
 
 
-def _add_release_flags(command):
-    command.add_argument("--allow-synthetic", action="store_true", help="accept the hand-written sample; demos and tests only")
-    command.add_argument("--diagnostic", action="store_true",
-                         help="render even when the review is not clean; the page is labeled as non-final")
-
-
 def build_parser():
     parser = argparse.ArgumentParser(prog="walkthrough.py", description="Git range to offline HTML walkthrough.")
     commands = parser.add_subparsers(dest="command", required=True)
 
-    extract = commands.add_parser("extract", help="write evidence.json for a reviewed base..final range")
+    extract = commands.add_parser("extract", help="write evidence.json for a committed base..final range")
     extract.add_argument("--repo", default=".", help="repository or worktree to read (default: current directory)")
     extract.add_argument("--base", required=True, help="full base commit ID")
     extract.add_argument("--final", required=True, help="full final commit ID")
-    extract.add_argument("--inputs", required=True, help="JSON with the review record and check results")
+    extract.add_argument("--inputs", required=True, help="JSON with check results and, if a review was run, its record")
     extract.add_argument("--out", required=True, help="where to write evidence.json")
     extract.add_argument("--source", action="append", default=[], metavar="PATH:SIDE:START-END",
                          help="also include an exact source range; SIDE is base or final")
@@ -1391,14 +1391,14 @@ def build_parser():
     validate = commands.add_parser("validate", help="check evidence, and a narrative if given")
     validate.add_argument("--evidence", required=True)
     validate.add_argument("--narrative")
-    _add_release_flags(validate)
+    validate.add_argument("--allow-synthetic", action="store_true", help="accept the hand-written sample; demos and tests only")
     validate.set_defaults(run=cmd_validate)
 
     render = commands.add_parser("render", help="validate, then write one offline HTML file")
     render.add_argument("--evidence", required=True)
     render.add_argument("--narrative", required=True)
     render.add_argument("--out", required=True)
-    _add_release_flags(render)
+    render.add_argument("--allow-synthetic", action="store_true", help="accept the hand-written sample; demos and tests only")
     render.set_defaults(run=cmd_render)
     return parser
 

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Git walkthrough extractor inputs v1",
-  "description": "Facts the extractor cannot read from Git: why the base was chosen, the review record, and check results. Written by the orchestrator from the review report and execution log.",
+  "description": "Facts the extractor cannot read from Git: why the base was chosen, check results, and the review record when a review was run. Leave review out when there was none; never write one for a review that did not happen.",
   "type": "object",
   "additionalProperties": false,
   "properties": {
@@ -142,7 +142,6 @@
   },
   "required": [
     "base_selection_reason",
-    "review",
     "checks",
     "coverage_limits"
   ]

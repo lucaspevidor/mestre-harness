@@ -9,7 +9,7 @@
 - [ ] Small direct implementation requests may use the light path
 - [ ] After approval, only the stages you ask for run: implement, review, fix, re-review, walkthrough. Not saying how far means implementation only
 - [ ] Local coherent milestone commits are part of approved implementation; push/PR/publication need separate approval
-- [ ] Three fix and re-review cycles are an acceptable default limit; unresolved defects remain visible, and a walkthrough of a review that is not clean is labeled diagnostic
+- [ ] Three fix and re-review cycles are an acceptable default limit; unresolved defects remain visible, and a walkthrough states whether its range was reviewed and whether that review was clean
 - [ ] Artifacts and the map live in `.agent-work/`, untracked, and that retention suits the repository
 
 ## Configuration review
